@@ -24,4 +24,31 @@ public class FilterInvoiceTest {
                 "All invoices should be below the low-value threshold"
         );
     }
+    // this test uses a stubbed dao so we dont touch the real db, just fake data.
+    // it checks that lowValueInvoices() an filters correctly with the stubbed list
+    @org.junit.jupiter.api.Test
+    void filterInvoiceStubbedTest() {
+        // create a mock dao
+        org.example.QueryInvoicesDAO stubDao = org.mockito.Mockito.mock(org.example.QueryInvoicesDAO.class);
+
+        // fake invoices 1 low value, 1 high
+        java.util.List<org.example.Invoice> fakeInvoices = java.util.List.of(
+                new org.example.Invoice("INV-001", 50),
+                new org.example.Invoice("INV-002", 250)
+        );
+
+        // stub dao.all() to return fake list
+        org.mockito.Mockito.when(stubDao.all()).thenReturn(fakeInvoices);
+
+        // inject stub into FilterInvoice
+        org.example.FilterInvoice filterInvoice = new org.example.FilterInvoice(stubDao);
+
+        // run logic
+        java.util.List<org.example.Invoice> lowInvoices = filterInvoice.lowValueInvoices();
+
+        // assertions
+        org.junit.jupiter.api.Assertions.assertEquals(1, lowInvoices.size());
+        org.junit.jupiter.api.Assertions.assertTrue(lowInvoices.get(0).getValue() < 100);
+    }
+
 }
