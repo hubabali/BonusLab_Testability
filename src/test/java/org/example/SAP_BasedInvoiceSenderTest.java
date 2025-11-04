@@ -51,4 +51,34 @@ public class SAP_BasedInvoiceSenderTest {
         // verify that send() was never called
         verify(sap, never()).send(any(Invoice.class));
     }
+    // this test fakes sap.send() failing for one invoice but checks that we keep sending others
+    @Test
+    void testThrowExceptionWhenBadInvoice() {
+        // mock dependencies
+        FilterInvoice filter = mock(FilterInvoice.class);
+        SAP sap = mock(SAP.class);
+
+        // create a bad invoice and a good one
+        Invoice bad = new Invoice("BAD", 30);
+        Invoice good = new Invoice("GOOD", 40);
+        List<Invoice> invoices = List.of(bad, good);
+
+        // stub the filter to return our fake list
+        when(filter.lowValueInvoices()).thenReturn(invoices);
+
+        // make sap.send() throw for the bad invoice
+        doThrow(new FailToSendSAPInvoiceException("SAP send failed"))
+                .when(sap).send(bad);
+
+        // inject mocks into sender
+        SAP_BasedInvoiceSender sender = new SAP_BasedInvoiceSender(filter, sap);
+
+        // run the method, it should keep going and return the failed ones
+        List<Invoice> failed = sender.sendLowValuedInvoices();
+
+        // verify that exactly one failed
+        org.junit.jupiter.api.Assertions.assertEquals(1, failed.size());
+        org.junit.jupiter.api.Assertions.assertEquals("BAD", failed.get(0).getCustomer());
+    }
+
 }
